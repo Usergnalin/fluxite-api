@@ -53,7 +53,7 @@ export const RATE_LIMIT = {
 // Character length of team slugs
 export const SLUG_LENGTH = 5
 // User Agent for use in modrinth api calls
-export const MODRINTH_USER_AGENT = 'Usergnalin/mc_manager_api (usernilang@gmail.com)'
+export const MODRINTH_USER_AGENT = 'Usergnalin/fluxite (usernilang@gmail.com)'
 // Time before a team agent linking code expires
 export const LINKING_CODE_EXPIRY = '30m'
 // Period of time where nonces are kept, nonces older than this are rejected
