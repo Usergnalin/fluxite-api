@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import ms from 'ms'
 import logger from './providers/logger.js'
-import {SLUG_LENGTH, SSE_HEARTBEAT_INTERVAL} from './configs/constants.js'
+import {SLUG_LENGTH, SSE_HEARTBEAT_INTERVAL, NET_BASE, HOST_MIN, HOST_MAX} from './configs/constants.js'
 import {predicates, objects} from 'friendly-words'
 import {redis_client} from './providers/redis.js'
 
@@ -139,6 +139,7 @@ const special_formats_select = {
     server_id: (prefix) => `BIN_TO_UUID(${prefix}server_id) AS server_id`,
     session_id: (prefix) => `BIN_TO_UUID(${prefix}session_id) AS session_id`,
     command_id: (prefix) => `BIN_TO_UUID(${prefix}command_id) AS command_id`,
+    tunnel_ip: (prefix) => `INET_NTOA(${prefix}tunnel_ip) AS tunnel_ip`,
 }
 
 export const format_columns_select = (columns, prefix = '') => {
@@ -171,4 +172,14 @@ export const compare_versions = (a, b) => {
         }
     }
     return 0
+}
+
+export const ip_to_int = (ip) => {
+  return ip.split('.').reduce((a, o) => ((a << 8) >>> 0) + Number(o), 0) >>> 0
+}
+export const int_to_ip = (n) => {
+  return [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.')
+}
+export const random_tunnel_ip = () => {
+  return NET_BASE + HOST_MIN + Math.floor(Math.random() * (HOST_MAX - HOST_MIN + 1))
 }

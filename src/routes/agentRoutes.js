@@ -14,7 +14,7 @@ router.post(
     '/',
     rate_limiter.slow,
     global_controller.load_body_data({
-        fields: ['agent_name', 'public_key'],
+        fields: ['agent_name', 'public_key', 'tunnel_public_key'],
         data_path: 'agent_data',
     }),
     global_controller.load_body_data({fields: ['linking_code'], data_path: 'linking_code'}),

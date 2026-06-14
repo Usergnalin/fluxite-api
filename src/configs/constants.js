@@ -1,14 +1,14 @@
 // --- DB info ---
 
 export const COMMAND_COLUMNS = ['command_id', 'agent_id', 'user_id', 'command', 'command_status', 'revision', 'created_at', 'updated_at', 'command_feedback']
-export const AGENT_COLUMNS = ['agent_id', 'team_id', 'agent_name', 'agent_status', 'last_online', 'public_key', 'revision', 'created_at', 'updated_at']
+export const AGENT_COLUMNS = ['agent_id', 'team_id', 'agent_name', 'agent_status', 'last_online', 'public_key', 'tunnel_public_key', 'tunnel_ip', 'revision', 'created_at', 'updated_at']
 export const MODULE_COLUMNS = ['module_id', 'server_id', 'module_name', 'module_enabled', 'module_type', 'module_metadata', 'revision', 'created_at', 'updated_at']
 export const SERVER_COLUMNS = ['server_id', 'agent_id', 'server_name', 'server_thumbnail', 'properties', 'server_status', 'last_online', 'revision', 'created_at', 'updated_at']
 
 export const COMMAND_STATUS = ['pending', 'queued', 'sent', 'success', 'failure']
 export const SERVER_STATUS = ['online', 'offline', 'starting', 'stopping']
 export const AGENT_STATUS = ['online', 'offline']
-    export const TEAM_ROLES = ['viewer', 'moderator', 'operator', 'admin', 'owner']
+export const TEAM_ROLES = ['viewer', 'moderator', 'operator', 'admin', 'owner']
 export const MODULE_TYPES = ['mod', 'resource_pack', 'data_pack', 'plugin']
 
 // --- Security ---
@@ -47,6 +47,16 @@ export const RATE_LIMIT = {
     normal: {window: '5m', limit: 200},
     fast: {window: '1m', limit: 200},
 }
+
+// -- Tunneling ---
+// Integer starting tunnel ip 
+export const NET_BASE = 2886729728 // 172.16.0.0
+// Minimum offset for peer ips
+export const HOST_MIN = 2 // skip .0 (network) and .1 (server)
+// Maximum offset for peer ips
+export const HOST_MAX = 2 ** 20 - 2 // /12 => 20 host bits
+// Maximum number of retries to find an available tunnel ip before giving up
+export const MAX_RETRIES = 5
 
 // --- Other configurables ---
 

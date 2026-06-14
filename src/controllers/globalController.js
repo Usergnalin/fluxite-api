@@ -65,6 +65,11 @@ const validation_logic = {
         const trimmed = value.trim()
         return trimmed.length > 0 && trimmed.length <= 255 ? trimmed : null
     },
+    tunnel_public_key: (value) => {
+        if (typeof value !== 'string') return null
+        const trimmed = value.trim()
+        return trimmed.length > 0 && trimmed.length <= 255 ? trimmed : null
+    },
     server_name: (value) => {
         if (typeof value !== 'string') return null
         const trimmed = value.trim()
@@ -197,6 +202,21 @@ const validation_logic = {
         if (typeof value !== 'string') return null
         return value.length > 0 && value.length <= 1023 ? value : null
     },
+    content: (value) => {
+        let payload
+        if (typeof value === 'string') {
+            try {
+                payload = JSON.parse(value)
+            } catch {
+                return null
+            }
+        } else if (typeof value === 'object') {
+            payload = value
+        } else {
+            return null
+        }
+        return typeof payload !== 'object' || payload === null ? null : payload
+    },
 }
 export const load_body_data = ({fields, data_path, bulk = false} = {}) => {
     return async (req, res, next) => {
@@ -298,6 +318,17 @@ export const send_data = ({data_path, status_code = 200} = {}) => {
     }
 }
 
+export const send_data_fixed = ({data, status_code = 200} = {}) => {
+    return async (req, res, next) => {
+        try {
+            res.status(status_code).json(data)
+        } catch (error) {
+            next(error)
+        }
+    }
+}
+
+
 export const send_empty = () => {
     return async (req, res, next) => {
         try {
@@ -312,6 +343,20 @@ export const redirect = ({url} = {}) => {
     return async (req, res, next) => {
         try {
             res.redirect(url)
+        } catch (error) {
+            next(error)
+        }
+    }
+}
+
+// === Debug only ===
+
+export const log_data = ({data_path} = {}) => {
+    return async (req, res, next) => {
+        try {
+            const data = get_path(res, data_path)
+            logger.debug({data: data}, 'Logging data')
+            next()
         } catch (error) {
             next(error)
         }

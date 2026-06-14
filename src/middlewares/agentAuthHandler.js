@@ -42,6 +42,23 @@ export const verify_signature = ({public_key_path = 'agent_data.public_key', age
     }
 }
 
+export const verify_token_signature = ({public_key_path = 'agent_data.public_key', token_signature_path = 'tunnel_login_data.metas.agent_id', agent_id_path = 'tunnel_login_data.metas.agent_id'} = {}) => {
+    return async (req, res, next) => {
+        try {
+            const public_key = get_path(res, public_key_path)
+            const token_signature = get_path(res, token_signature_path)
+            const agent_id = get_path(res, agent_id_path)
+            const is_valid = nacl.sign.detached.verify(Buffer.from(agent_id, 'utf8'), Buffer.from(token_signature, 'base64'), Buffer.from(public_key, 'base64'))
+            if (!is_valid) {
+                return res.status(403).json({message: 'Invalid token signature'})
+            }
+            next()
+        } catch (error) {
+            next(error)
+        }
+    }
+}
+
 export const generate_agent_token = ({agent_id_path = 'agent_id'} = {}) => {
     return async (req, res, next) => {
         try {
