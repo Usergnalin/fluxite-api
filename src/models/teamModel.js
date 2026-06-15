@@ -1,12 +1,13 @@
 import pool from '../providers/db.js'
 import {v7 as uuid} from 'uuid'
-import {generate_slug, format_columns_select} from '../utils.js'
+import {nanoid} from 'nanoid-nice'
+import {format_columns_select} from '../utils.js'
 
 export const insert_single = async (user_id, data) => {
     const connection = await pool.getConnection()
     try {
         const team_id = uuid()
-        const slug = generate_slug()
+        const slug = nanoid(6)
         await connection.beginTransaction()
         await connection.execute(`INSERT INTO Team (team_id, team_name, slug) VALUES (UUID_TO_BIN(?), ?, ?)`, [team_id, data.team_name, slug])
         await connection.execute(`INSERT INTO UserTeam (user_id, team_id, role) VALUES (UUID_TO_BIN(?), UUID_TO_BIN(?), ?)`, [user_id, team_id, 'owner'])
@@ -20,8 +21,8 @@ export const insert_single = async (user_id, data) => {
     }
 }
 
-export const get_all_data_by_team_id = async (team_id, agent_columns, command_columns, server_columns, module_columns) => {
-    const [agents, commands, servers, modules] = await Promise.all([
+export const get_all_data_by_team_id = async (team_id, agent_columns, command_columns, server_columns, module_columns, tunnel_columns) => {
+    const [agents, commands, servers, modules, tunnels] = await Promise.all([
         pool.execute(
             `
             SELECT ${format_columns_select(agent_columns, 'Agent')}
@@ -56,8 +57,16 @@ export const get_all_data_by_team_id = async (team_id, agent_columns, command_co
             WHERE Agent.team_id = UUID_TO_BIN(?)`,
             [team_id],
         ),
+        pool.execute(
+            `
+            SELECT ${format_columns_select(tunnel_columns, 'Tunnel')}
+            FROM Tunnel
+            JOIN Agent ON Tunnel.agent_id = Agent.agent_id
+            WHERE Agent.team_id = UUID_TO_BIN(?)`,
+            [team_id],
+        ),
     ])
-    return {agents: agents[0], commands: commands[0], servers: servers[0], modules: modules[0]}
+    return {agents: agents[0], commands: commands[0], servers: servers[0], modules: modules[0], tunnels: tunnels[0]}
 }
 
 export const check_access_by_user_id_and_role = async (user_id, team_id, role) => {

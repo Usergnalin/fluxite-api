@@ -54,10 +54,12 @@ export const insert_single = async (agent_id, data) => {
     const connection = await pool.getConnection()
     try {
         await connection.beginTransaction()
-        const [insert_results] = await connection.execute(`INSERT INTO Server (server_id, agent_id, server_name, properties) VALUES (UUID_TO_BIN(?), UUID_TO_BIN(?), ?, ?)`, [
+        console.log(data)
+        const [insert_results] = await connection.execute(`INSERT INTO Server (server_id, agent_id, server_name, server_port, properties) VALUES (UUID_TO_BIN(?), UUID_TO_BIN(?), ?, ?, ?)`, [
             data.server_id,
             agent_id,
             data.server_name,
+            data.server_port,
             JSON.stringify(data.properties),
         ])
         const [select_results] = await connection.execute(

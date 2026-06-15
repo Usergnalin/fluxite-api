@@ -6,6 +6,15 @@ import {SERVER_STATUS, COMMAND_STATUS, AGENT_STATUS, MODULE_TYPES} from '../conf
 // === Request handlers ===
 
 const validation_logic = {
+    agent_port: (value) => {
+        const parsed_value = parseInt(value)
+        return Number.isSafeInteger(parsed_value) && parsed_value > 0 && parsed_value <= 65535 ? parsed_value : null
+    },
+    tunnel_name: (value) => {
+        if (typeof value !== 'string') return null
+        const trimmed = value.trim()
+        return trimmed.length > 0 && trimmed.length <= 63 ? trimmed : null
+    },
     username: (value) => {
         if (typeof value !== 'string') return null
         const trimmed = value.trim()
@@ -105,6 +114,10 @@ const validation_logic = {
         const trimmed = value.trim().toLowerCase()
         if (!SERVER_STATUS.includes(trimmed)) return null
         return trimmed
+    },
+    server_port: (value) => {
+        const parsed_value = parseInt(value)
+        return Number.isSafeInteger(parsed_value) && parsed_value > 0 && parsed_value <= 65535 ? parsed_value : null
     },
     command_status: (value) => {
         if (typeof value !== 'string') return null

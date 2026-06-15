@@ -1,21 +1,11 @@
 import crypto from 'node:crypto'
 import ms from 'ms'
 import logger from './providers/logger.js'
-import {SLUG_LENGTH, SSE_HEARTBEAT_INTERVAL, NET_BASE, HOST_MIN, HOST_MAX} from './configs/constants.js'
+import {SSE_HEARTBEAT_INTERVAL, NET_BASE, HOST_MIN, HOST_MAX} from './configs/constants.js'
 import {predicates, objects} from 'friendly-words'
 import {redis_client} from './providers/redis.js'
 
 const sse_heartbeat_interval = ms(SSE_HEARTBEAT_INTERVAL)
-
-export const generate_slug = () => {
-    const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
-    let result = ''
-    const random_bytes = crypto.randomBytes(SLUG_LENGTH)
-    for (let i = 0; i < SLUG_LENGTH; i++) {
-        result += alphabet.charAt(random_bytes[i] % alphabet.length)
-    }
-    return result
-}
 
 export const generate_phrase = () => {
     const p1 = predicates[crypto.randomInt(0, predicates.length)]
@@ -139,6 +129,7 @@ const special_formats_select = {
     server_id: (prefix) => `BIN_TO_UUID(${prefix}server_id) AS server_id`,
     session_id: (prefix) => `BIN_TO_UUID(${prefix}session_id) AS session_id`,
     command_id: (prefix) => `BIN_TO_UUID(${prefix}command_id) AS command_id`,
+    tunnel_id: (prefix) => `BIN_TO_UUID(${prefix}tunnel_id) AS tunnel_id`,
     tunnel_ip: (prefix) => `INET_NTOA(${prefix}tunnel_ip) AS tunnel_ip`,
 }
 

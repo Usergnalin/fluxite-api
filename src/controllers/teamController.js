@@ -23,11 +23,11 @@ export const create_team = ({team_data_path = 'team_data', user_id_path = 'user_
     }
 }
 
-export const get_all_data_by_team_id = ({agent_fields, command_fields, server_fields, module_fields, team_id_path = 'team_id', output_data_path = 'data'} = {}) => {
+export const get_all_data_by_team_id = ({agent_fields, command_fields, server_fields, module_fields, tunnel_fields, team_id_path = 'team_id', output_data_path = 'data'} = {}) => {
     return async (req, res, next) => {
         try {
             const team_id = get_path(res, team_id_path)
-            const results = await team_model.get_all_data_by_team_id(team_id, agent_fields, command_fields, server_fields, module_fields)
+            const results = await team_model.get_all_data_by_team_id(team_id, agent_fields, command_fields, server_fields, module_fields, tunnel_fields)
             set_path(res, output_data_path, results)
             next()
         } catch (error) {
@@ -58,7 +58,7 @@ export const check_access_by_user_id_and_role = ({team_id_path = 'team_id', user
     }
 }
 
-export const stream_all_data_by_team_id = ({agent_fields, command_fields, server_fields, module_fields, team_id_path = 'team_id', session_id_path = 'session_id'} = {}) => {
+export const stream_all_data_by_team_id = ({agent_fields, command_fields, server_fields, module_fields, tunnel_fields, team_id_path = 'team_id', session_id_path = 'session_id'} = {}) => {
     return async (req, res, next) => {
         try {
             const field_map = {
@@ -66,6 +66,7 @@ export const stream_all_data_by_team_id = ({agent_fields, command_fields, server
                 command: command_fields,
                 server: server_fields,
                 module: module_fields,
+                tunnel: tunnel_fields,
             }
 
             const team_id = get_path(res, team_id_path)
@@ -84,6 +85,9 @@ export const stream_all_data_by_team_id = ({agent_fields, command_fields, server
                 `create:module:team:${team_id}`,
                 `update:module:team:${team_id}`,
                 `delete:module:team:${team_id}`,
+                `create:tunnel:team:${team_id}`,
+                `update:tunnel:team:${team_id}`,
+                `delete:tunnel:team:${team_id}`,
             ]
 
             const subscriptions = new Map()

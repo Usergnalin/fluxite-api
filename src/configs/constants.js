@@ -4,6 +4,7 @@ export const COMMAND_COLUMNS = ['command_id', 'agent_id', 'user_id', 'command', 
 export const AGENT_COLUMNS = ['agent_id', 'team_id', 'agent_name', 'agent_status', 'last_online', 'public_key', 'tunnel_public_key', 'tunnel_ip', 'revision', 'created_at', 'updated_at']
 export const MODULE_COLUMNS = ['module_id', 'server_id', 'module_name', 'module_enabled', 'module_type', 'module_metadata', 'revision', 'created_at', 'updated_at']
 export const SERVER_COLUMNS = ['server_id', 'agent_id', 'server_name', 'server_thumbnail', 'properties', 'server_status', 'last_online', 'revision', 'created_at', 'updated_at']
+export const TUNNEL_COLUMNS = ['tunnel_id', 'server_id', 'agent_id', 'agent_port', 'subdomain', 'created_at', 'updated_at', 'revision']
 
 export const COMMAND_STATUS = ['pending', 'queued', 'sent', 'success', 'failure']
 export const SERVER_STATUS = ['online', 'offline', 'starting', 'stopping']
@@ -57,6 +58,10 @@ export const HOST_MIN = 2 // skip .0 (network) and .1 (server)
 export const HOST_MAX = 2 ** 20 - 2 // /12 => 20 host bits
 // Maximum number of retries to find an available tunnel ip before giving up
 export const MAX_RETRIES = 5
+// Minimum Tunnel subdomain slug length
+export const MIN_SUBDOMAIN_SLUG_LENGTH = 3
+// Maximum Tunnel subdomain slug length
+export const MAX_SUBDOMAIN_SLUG_LENGTH = 10
 
 // --- Other configurables ---
 
@@ -101,6 +106,14 @@ export const CONSTANTS = {
     AGENT_COLUMNS,
     MODULE_COLUMNS,
     SERVER_COLUMNS,
+    TUNNEL_COLUMNS,
+    NET_BASE,
+    HOST_MIN,
+    HOST_MAX,
+    MAX_RETRIES,
+    MIN_SUBDOMAIN_SLUG_LENGTH,
+    MAX_SUBDOMAIN_SLUG_LENGTH,
+    LEGAL_COMPLIANCE_VERSION,
     OAUTH_NONCE_MAX_DURATION,
     LOADER_UPDATE_INTERVAL,
 }

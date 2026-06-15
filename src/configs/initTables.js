@@ -111,6 +111,7 @@ CREATE TABLE Server (
     server_id BINARY(16) PRIMARY KEY,
     agent_id BINARY(16) NOT NULL,
     server_name VARCHAR(255) NOT NULL,
+    server_port INT UNSIGNED NOT NULL,
     properties JSON NOT NULL,
     server_status ENUM(${SERVER_STATUS.map((r) => `'${r}'`).join(',')}) NOT NULL DEFAULT 'offline',
     server_thumbnail VARCHAR(1023) NULL,

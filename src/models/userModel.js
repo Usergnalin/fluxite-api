@@ -1,6 +1,7 @@
 import pool from '../providers/db.js'
 import {v7 as uuid} from 'uuid'
-import {generate_slug, generate_phrase, format_columns_select} from '../utils.js'
+import {nanoid} from 'nanoid-nice'
+import {generate_phrase, format_columns_select} from '../utils.js'
 import {LEGAL_COMPLIANCE_VERSION} from '../configs/constants.js'
 
 export const insert_single = async (data) => {
@@ -9,7 +10,7 @@ export const insert_single = async (data) => {
         const {username, password} = data
         const user_id = uuid()
         const team_id = uuid()
-        const slug = generate_slug()
+        const slug = nanoid(6)
         const team_name = `${username}'s Team`
         await connection.beginTransaction()
         await connection.query(
@@ -44,7 +45,7 @@ export const insert_single_with_identity = async (provider, provider_user_id) =>
         const team_id = uuid()
         const identity_id = uuid()
         const username = generate_phrase()
-        const slug = generate_slug()
+        const slug = nanoid(6)
         const team_name = `${username}'s Team`
         await connection.beginTransaction()
         await connection.query(`

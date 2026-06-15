@@ -8,9 +8,9 @@ import logger from '../providers/logger.js'
 export const create_server = ({server_data_path = 'server_data', agent_id_path = 'agent_id'} = {}) => {
     return async (req, res, next) => {
         try {
-            const {server_id, server_name, properties} = get_path(res, server_data_path)
+            const server_data = get_path(res, server_data_path)
             const agent_id = get_path(res, agent_id_path)
-            await server_model.insert_single(agent_id, {server_id, server_name, properties})
+            await server_model.insert_single(agent_id, server_data)
             next()
         } catch (error) {
             next(error)

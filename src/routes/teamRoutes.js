@@ -23,10 +23,11 @@ router.get(
     global_controller.load_param_data({field: 'team_id', data_path: 'team_id'}),
     team_controller.check_access_by_user_id_and_role({role: ['viewer', 'moderator', 'operator', 'admin', 'owner']}),
     team_controller.get_all_data_by_team_id({
-        agent_fields: ['agent_id', 'agent_name', 'agent_status', 'updated_at', 'revision', 'last_online'],
+        agent_fields: ['agent_id', 'agent_name', 'agent_status', 'updated_at', 'revision', 'last_online', 'tunnel_ip'],
         command_fields: ['agent_id', 'command_id', 'command', 'command_status', 'created_at', 'updated_at', 'command_feedback', 'revision'],
         server_fields: ['agent_id', 'server_id', 'server_name', 'server_status', 'server_thumbnail', 'properties', 'revision', 'last_online'],
         module_fields: ['server_id', 'module_id', 'module_name', 'module_type', 'module_enabled', 'module_metadata', 'revision'],
+        tunnel_fields: ['tunnel_id', 'server_id', 'agent_id', 'agent_port', 'subdomain', 'created_at', 'updated_at', 'revision'],
     }),
     global_controller.send_data({data_path: 'data'}),
 )
@@ -39,10 +40,11 @@ router.get(
     global_controller.load_param_data({field: 'team_id', data_path: 'team_id'}),
     team_controller.check_access_by_user_id_and_role({role: ['viewer', 'moderator', 'operator', 'admin', 'owner']}),
     team_controller.stream_all_data_by_team_id({
-        agent_fields: ['agent_id', 'agent_name', 'agent_status', 'updated_at', 'revision'],
+        agent_fields: ['agent_id', 'agent_name', 'agent_status', 'updated_at', 'revision', 'last_online', 'tunnel_ip'],
         command_fields: ['agent_id', 'command_id', 'command', 'command_status', 'created_at', 'updated_at', 'command_feedback', 'revision'],
-        server_fields: ['agent_id', 'server_id', 'server_name', 'server_status', 'server_thumbnail', 'properties', 'revision'],
+        server_fields: ['agent_id', 'server_id', 'server_name', 'server_status', 'server_thumbnail', 'properties', 'revision', 'last_online'],
         module_fields: ['server_id', 'module_id', 'module_name', 'module_type', 'module_enabled', 'module_metadata', 'revision'],
+        tunnel_fields: ['tunnel_id', 'server_id', 'agent_id', 'agent_port', 'subdomain', 'created_at', 'updated_at', 'revision'],
     }),
 )
 

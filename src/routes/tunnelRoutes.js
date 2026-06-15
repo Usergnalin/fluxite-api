@@ -1,28 +1,35 @@
 import express from 'express'
 const router = express.Router()
-import * as rate_limiter from '../providers/rateLimiter.js'
+import * as session_handler from '../middlewares/sessionHandler.js'
 import * as agent_controller from '../controllers/agentController.js'
+import * as server_controller from '../controllers/serverController.js'
+import * as rate_limiter from '../providers/rateLimiter.js'
 import * as global_controller from '../controllers/globalController.js'
-import * as agent_auth_handler from '../middlewares/agentAuthHandler.js'
+import * as tunnel_controller from '../controllers/tunnelController.js'
 
-// Create new tunnel (user)
-// router.post(
-//     '/',
-//     rate_limiter.slow,
-//     global_controller.load_body_data({fields: ['username', 'password'], data_path: 'user_data'}),
-//     password_handler.hash_password(),
-//     user_controller.create_user(),
-//     global_controller.send_data({data_path: 'user_team_data'}),
-// )
-
-// Authenticate frpc login request (frps)
+// Create new tunnel with no associated server (user)
 router.post(
-    '/login',
-    rate_limiter.fast,
-    global_controller.load_body_data({fields: ['content'], data_path: 'tunnel_login_data'}),
-    agent_controller.get_agent_by_agent_id({fields: ['public_key'], agent_id_path: 'tunnel_login_data.content.metas.agent_id'}),
-    agent_auth_handler.verify_token_signature(),
-    global_controller.send_data_fixed({data: {reject: false, unchange: false}, status_code: 200}),
+    '/agent/:agent_id',
+    rate_limiter.normal,
+    session_handler.verify_session_token(),
+    global_controller.load_param_data({field: 'agent_id', data_path: 'agent_id'}),
+    agent_controller.check_access_by_user_id_and_role({role: ['operator', 'admin', 'owner']}),   
+    // Check if tunnel creation is allowed for the agent's team
+    global_controller.load_body_data({fields: ['agent_port', 'tunnel_name'], data_path: 'tunnel_data'}),
+    tunnel_controller.create_agent_tunnel({agent_id_path: 'agent_id'}),
+    global_controller.send_data({data_path: 'tunnel_data'}),
+)
+
+// Create new tunnel with associated server (user)
+router.post(
+    '/server/:server_id',
+    rate_limiter.normal,
+    session_handler.verify_session_token(),
+    global_controller.load_param_data({field: 'server_id', data_path: 'server_id'}),
+    server_controller.check_access_by_user_id_and_role({role: ['operator', 'admin', 'owner']}),
+    // Check if tunnel creation is allowed for the server's agent's team    
+    tunnel_controller.create_server_tunnel({server_id_path: 'server_id'}),
+    global_controller.send_data({data_path: 'tunnel_data'}),
 )
 
 export default router

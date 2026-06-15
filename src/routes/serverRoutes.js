@@ -13,7 +13,7 @@ router.post(
     '/',
     rate_limiter.normal,
     agent_auth_handler.verify_agent_token(),
-    global_controller.load_body_data({fields: ['server_id', 'server_name', 'properties'], data_path: 'server_data'}),
+    global_controller.load_body_data({fields: ['server_id', 'server_name', 'server_port', 'properties'], data_path: 'server_data'}),
     server_controller.create_server(),
     global_controller.send_empty(),
 )
