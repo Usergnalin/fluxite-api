@@ -137,22 +137,35 @@ export const update_by_agent_id = async (agent_id, data, columns) => {
     }
 }
 
-export const delete_by_agent_id = async (agent_id) => {
-    const [select_results] = await pool.execute(
-        `
-        SELECT BIN_TO_UUID(Agent.team_id) as team_id
-        FROM Agent
-        WHERE Agent.agent_id = UUID_TO_BIN(?)`,
-        [agent_id],
-    )
-    if (select_results.length === 0) return {affectedRows: 0}
-    const {team_id} = select_results[0]
-    const [delete_results] = await pool.execute('DELETE FROM Agent WHERE agent_id = UUID_TO_BIN(?)', [agent_id])
-    const payload = {team_id, agent_id}
-    db_events.emit(`delete:agent:agent:${agent_id}`, payload)
-    db_events.emit(`delete:agent:team:${team_id}`, payload)
-    return delete_results
-}
+    export const delete_by_agent_id = async (agent_id) => {
+        const [select_results] = await pool.execute(
+            `
+            SELECT BIN_TO_UUID(Agent.team_id) as team_id
+            FROM Agent
+            WHERE Agent.agent_id = UUID_TO_BIN(?)`,
+            [agent_id],
+        )
+        if (select_results.length === 0) return {affectedRows: 0}
+        const {team_id} = select_results[0] 
+        const connection = await pool.getConnection()
+        try {
+            await connection.beginTransaction()
+            await connection.execute('SELECT agent_id FROM Agent WHERE agent_id = UUID_TO_BIN(?) FOR UPDATE', [agent_id]) // Lock the agent, prevent new tunnels
+            await connection.execute('UPDATE Tunnel SET to_delete = TRUE WHERE agent_id = UUID_TO_BIN(?)', [agent_id]) // Mark tunnels for deletion
+            const [delete_results] = await connection.execute('DELETE FROM Agent WHERE agent_id = UUID_TO_BIN(?)', [agent_id])
+            await connection.commit()
+            const payload = {team_id, agent_id}
+            // Dont need to send updates for tunnels because its agent is deleted
+            db_events.emit(`delete:agent:agent:${agent_id}`, payload)
+            db_events.emit(`delete:agent:team:${team_id}`, payload)
+            return delete_results
+        } catch (error) {
+            await connection.rollback()
+            throw error
+        } finally {
+            connection.release()
+        }
+    }
 
 export const update_all = async (data, columns) => {
     const fields = []

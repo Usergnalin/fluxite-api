@@ -1,15 +1,24 @@
 import {Worker} from 'bullmq'
 import fetch_loaders from '../services/fetchLoaders.js'
+import sync_tunnels from '../services/syncTunnels.js'
 import {redis_client} from '../providers/redis.js'
 
-const _worker = new Worker(
+const _fetch_loaders_worker = new Worker(
     'fetch_loaders',
-    async () => {
-        await fetch_loaders()
-    },
+    async () => { await fetch_loaders() },
     {
         connection: redis_client,
         lockDuration: 600000,
         stalledInterval: 600000,
+    }
+)
+
+const _tunnel_sync_worker = new Worker(
+    'tunnel_sync',
+    async () => { await sync_tunnels() },
+    {
+        connection: redis_client,
+        lockDuration: 60000,
+        stalledInterval: 60000,
     }
 )

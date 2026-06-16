@@ -45,6 +45,11 @@ const validation_logic = {
         const trimmed = value.trim()
         return validate_uuid(trimmed) ? trimmed : null
     },
+    tunnel_id: (value) => {
+        if (typeof value !== 'string') return null
+        const trimmed = value.trim()
+        return validate_uuid(trimmed) ? trimmed : null
+    },
     command: (value) => {
         let payload
         if (typeof value === 'string') {

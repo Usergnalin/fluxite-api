@@ -146,12 +146,25 @@ export const delete_by_server_id = async (server_id) => {
     )
     if (select_results.length === 0) return {affectedRows: 0}
     const {agent_id, team_id} = select_results[0]
-    const [delete_results] = await pool.execute('DELETE FROM Server WHERE server_id = UUID_TO_BIN(?)', [server_id])
-    const payload = {agent_id, server_id, team_id}
-    db_events.emit(`delete:server:server:${server_id}`, payload)
-    db_events.emit(`delete:server:agent:${agent_id}`, payload)
-    db_events.emit(`delete:server:team:${team_id}`, payload)
-    return delete_results
+    const connection = await pool.getConnection()
+    try {
+        await connection.beginTransaction()
+        await connection.execute('SELECT server_id FROM Server WHERE server_id = UUID_TO_BIN(?) FOR UPDATE', [server_id]) // Lock the server, prevent new tunnels
+        await connection.execute('UPDATE Tunnel SET to_delete = TRUE WHERE server_id = UUID_TO_BIN(?)', [server_id]) // Mark tunnels for deletion
+        const [delete_results] = await connection.execute('DELETE FROM Server WHERE server_id = UUID_TO_BIN(?)', [server_id])
+        await connection.commit()
+        const payload = {agent_id, server_id, team_id}
+        // Dont need to send updates for tunnels because its server is deleted
+        db_events.emit(`delete:server:server:${server_id}`, payload)
+        db_events.emit(`delete:server:agent:${agent_id}`, payload)
+        db_events.emit(`delete:server:team:${team_id}`, payload)
+        return delete_results
+    } catch (error) {
+        await connection.rollback()
+        throw error
+    } finally {
+        connection.release()
+    }
 }
 
 export const select_by_server_id = async (server_id, columns) => {

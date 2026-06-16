@@ -4,7 +4,7 @@ export const COMMAND_COLUMNS = ['command_id', 'agent_id', 'user_id', 'command', 
 export const AGENT_COLUMNS = ['agent_id', 'team_id', 'agent_name', 'agent_status', 'last_online', 'public_key', 'tunnel_public_key', 'tunnel_ip', 'revision', 'created_at', 'updated_at']
 export const MODULE_COLUMNS = ['module_id', 'server_id', 'module_name', 'module_enabled', 'module_type', 'module_metadata', 'revision', 'created_at', 'updated_at']
 export const SERVER_COLUMNS = ['server_id', 'agent_id', 'server_name', 'server_thumbnail', 'properties', 'server_status', 'last_online', 'revision', 'created_at', 'updated_at']
-export const TUNNEL_COLUMNS = ['tunnel_id', 'server_id', 'agent_id', 'agent_port', 'subdomain', 'created_at', 'updated_at', 'revision']
+export const TUNNEL_COLUMNS = ['tunnel_id', 'server_id', 'agent_id', 'agent_port', 'subdomain', 'to_delete', 'created_at', 'updated_at', 'revision']
 
 export const COMMAND_STATUS = ['pending', 'queued', 'sent', 'success', 'failure']
 export const SERVER_STATUS = ['online', 'offline', 'starting', 'stopping']
@@ -77,6 +77,9 @@ export const NONCE_MAX_DURATION = '1m'
 export const JSON_MAX_BODY_SIZE = '10mb'
 // Interval of scraping of new mc and loader versions
 export const LOADER_UPDATE_INTERVAL = '6h'
+// Interval of syncing of tunnel server and process deletes
+export const TUNNEL_SYNC_INTERVAL = '1m'
+
 // Current legal compliance version
 export const LEGAL_COMPLIANCE_VERSION = 1
 

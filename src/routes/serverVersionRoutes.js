@@ -14,6 +14,11 @@ router.get(
 )
 
 // Get all MC versions
-router.get('/', rate_limiter.normal, server_version_controller.get_mc_versions(), global_controller.send_data({data_path: 'mc_versions'}))
+router.get(
+    '/',
+    rate_limiter.normal,
+    server_version_controller.get_mc_versions(),
+    global_controller.send_data({data_path: 'mc_versions'}),
+)
 
 export default router

@@ -102,7 +102,7 @@ export const insert_server_tunnel = async (server_id) => {
                 db_events.emit(`create:tunnel:team:${payload.team_id}`, payload)
                 return {...insert_results, data: payload}
             } catch (error) {
-                if (error.code === 'ER_DUP_ENTRY') {
+                if (error.code === 'ER_DUP_ENTRY' && error.message.includes('subdomain')) {
                     continue
                 }
                 await connection.rollback()
@@ -113,4 +113,156 @@ export const insert_server_tunnel = async (server_id) => {
     } finally {
         connection.release()
     }
+}
+
+// export const delete_by_tunnel_id = async (tunnel_id) => {
+//     const [select_results] = await pool.execute(`
+//         SELECT 
+//         BIN_TO_UUID(Tunnel.tunnel_id) as tunnel_id,
+//         BIN_TO_UUID(Tunnel.server_id) as server_id,
+//         BIN_TO_UUID(Tunnel.agent_id) as agent_id,
+//         BIN_TO_UUID(Agent.team_id) as team_id
+//         FROM Tunnel
+//         INNER JOIN Agent ON Tunnel.agent_id = Agent.agent_id
+//         WHERE Tunnel.tunnel_id = UUID_TO_BIN(?) AND Tunnel.to_delete = FALSE`,
+//         [tunnel_id]
+//     ) 
+//     if (select_results.length === 0) return {affectedRows: 0}
+//     const { server_id, agent_id, team_id } = select_results[0]
+//     const [update_results] = await pool.execute(
+//         'UPDATE Tunnel SET to_delete = TRUE WHERE tunnel_id = UUID_TO_BIN(?)', 
+//         [tunnel_id]
+//     )
+//     const payload = { tunnel_id, server_id, agent_id, team_id }
+//     db_events.emit(`update:tunnel:tunnel:${tunnel_id}`, payload)
+//     db_events.emit(`update:tunnel:agent:${agent_id}`, payload)
+//     if (server_id) db_events.emit(`delete:tunnel:server:${server_id}`, payload)
+//     db_events.emit(`update:tunnel:team:${team_id}`, payload)
+//     return update_results
+// }
+
+export const delete_by_tunnel_id = async (tunnel_id) => {
+    const [select_results] = await pool.execute(`
+        SELECT
+        BIN_TO_UUID(Server.agent_id) as agent_id,
+        BIN_TO_UUID(Agent.team_id) as team_id,
+        BIN_TO_UUID(Server.server_id) as server_id
+        FROM Tunnel
+        INNER JOIN Agent ON Tunnel.agent_id = Agent.agent_id
+        LEFT JOIN Server ON Tunnel.server_id = Server.server_id
+        WHERE Tunnel.tunnel_id = UUID_TO_BIN(?)`,
+        [tunnel_id],
+    )
+    if (select_results.length === 0) return {affectedRows: 0}
+    const {server_id, agent_id, team_id} = select_results[0]
+    const connection = await pool.getConnection()
+    try {
+        await connection.beginTransaction()
+        const [delete_results] = await connection.execute('DELETE FROM Tunnel WHERE tunnel_id = UUID_TO_BIN(?)', [tunnel_id])
+        await connection.commit()
+        const payload = {tunnel_id, agent_id, server_id, team_id}
+        db_events.emit(`delete:tunnel:tunnel:${tunnel_id}`, payload)
+        if (server_id) db_events.emit(`delete:tunnel:server:${server_id}`, payload)
+        db_events.emit(`delete:tunnel:agent:${agent_id}`, payload)
+        db_events.emit(`delete:tunnel:team:${team_id}`, payload)
+        return delete_results
+    } catch (error) {
+        await connection.rollback()
+        throw error
+    } finally {
+        connection.release()
+    }
+}
+
+export const update_by_tunnel_id = async (tunnel_id, data, columns) => {
+    const fields = []
+    const values = []
+    columns.forEach((column) => {
+        if (data[column] !== undefined) {
+            let value = data[column]
+            fields.push(`${column} = ?`)
+            values.push(value)
+        }
+    })
+    const connection = await pool.getConnection()
+    try {
+        await connection.beginTransaction()
+        const [update_results] = await connection.execute(
+            `
+            UPDATE Tunnel 
+            SET ${fields.join(', ')}, revision = revision + 1
+            WHERE tunnel_id = UUID_TO_BIN(?)`,
+            [...values, tunnel_id],
+        )
+        if (update_results.affectedRows === 0) {
+            await connection.rollback()
+            return update_results
+        }
+        const [select_results] = await connection.execute(`
+            SELECT
+            BIN_TO_UUID(Agent.team_id) as team_id,
+            BIN_TO_UUID(Tunnel.agent_id) as agent_id,
+            BIN_TO_UUID(Server.server_id) as server_id,
+            ${formatted_tunnel_columns}
+            FROM Tunnel
+            INNER JOIN Agent ON Tunnel.agent_id = Agent.agent_id
+            LEFT JOIN Server ON Tunnel.server_id = Server.server_id
+            WHERE Tunnel.tunnel_id = UUID_TO_BIN(?)`,
+            [tunnel_id],
+        )
+        await connection.commit()
+        const payload = select_results[0]
+        db_events.emit(`update:tunnel:tunnel:${payload.tunnel_id}`, payload)
+        if (payload.server_id) db_events.emit(`update:tunnel:server:${payload.server_id}`, payload)
+        db_events.emit(`update:tunnel:agent:${payload.agent_id}`, payload)
+        db_events.emit(`update:tunnel:team:${payload.team_id}`, payload)
+        return update_results
+    } catch (error) {
+        await connection.rollback()
+        throw error
+    } finally {
+        connection.release()
+    }
+}
+
+export const check_access_by_user_id_and_role = async (user_id, tunnel_id, role) => {
+    const results = await pool.query(
+        `
+        SELECT
+        EXISTS (
+            SELECT 1 FROM User WHERE user_id = UUID_TO_BIN(?)
+        ) AS user_exists,
+
+        EXISTS (
+            SELECT 1 FROM Tunnel WHERE tunnel_id = UUID_TO_BIN(?)
+        ) AS tunnel_exists,
+
+        EXISTS (
+            SELECT 1
+            FROM UserTeam
+            JOIN Agent ON UserTeam.team_id = Agent.team_id
+            JOIN Tunnel ON Agent.agent_id = Tunnel.agent_id
+            WHERE UserTeam.user_id = UUID_TO_BIN(?)
+                AND Tunnel.tunnel_id = UUID_TO_BIN(?)
+                AND UserTeam.role IN (?)
+        ) AS has_access`,
+        [user_id, tunnel_id, user_id, tunnel_id, role],
+    )
+    return results[0][0]
+}
+
+export const select_all = async (tunnel_columns, agent_columns) => {
+    const [results] = await pool.execute(`
+        SELECT ${format_columns_select(tunnel_columns, 'Tunnel')}, ${format_columns_select(agent_columns, "Agent")} FROM Tunnel
+        JOIN Agent ON Tunnel.agent_id = Agent.agent_id`
+    )
+    return results
+}
+
+export const select_all_to_delete = async (columns) => {
+    const [results] = await pool.execute(`
+        SELECT ${format_columns_select(columns, 'Tunnel')} FROM Tunnel
+        WHERE to_delete = TRUE`
+    )
+    return results
 }
