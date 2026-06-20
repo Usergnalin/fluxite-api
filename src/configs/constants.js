@@ -34,6 +34,14 @@ export const SECURE_COOKIE = true
 export const PASSWORD_MIN_SCORE = 2
 // Period of time where Oauth nonces are kept, nonces older than this are rejected on callback
 export const OAUTH_NONCE_MAX_DURATION = '10m'
+// Invite permission hierarchy
+export const INVITE_PERMISSIONS = {
+    owner:     ['admin', 'operator', 'moderator', 'viewer'],
+    admin:     ['operator', 'moderator', 'viewer'],
+    operator:  ['viewer'],
+    moderator: null,
+    viewer:    null,
+}
 
 // --- SSE streams ---
 
@@ -70,7 +78,9 @@ export const SLUG_LENGTH = 5
 // User Agent for use in modrinth api calls
 export const MODRINTH_USER_AGENT = 'Usergnalin/fluxite (usernilang@gmail.com)'
 // Time before a team agent linking code expires
-export const LINKING_CODE_EXPIRY = '30m'
+export const LINKING_CODE_EXPIRY = '6h'
+// Time before a team invite code expires
+export const INVITE_CODE_EXPIRY = '6h'
 // Period of time where nonces are kept, nonces older than this are rejected
 export const NONCE_MAX_DURATION = '1m'
 // Max body size of json requests
@@ -79,7 +89,6 @@ export const JSON_MAX_BODY_SIZE = '10mb'
 export const LOADER_UPDATE_INTERVAL = '6h'
 // Interval of syncing of tunnel server and process deletes
 export const TUNNEL_SYNC_INTERVAL = '1m'
-
 // Current legal compliance version
 export const LEGAL_COMPLIANCE_VERSION = 1
 
@@ -101,6 +110,7 @@ export const CONSTANTS = {
     SLUG_LENGTH,
     MODRINTH_USER_AGENT,
     LINKING_CODE_EXPIRY,
+    INVITE_CODE_EXPIRY,
     NONCE_MAX_DURATION,
     RATE_LIMIT,
     MODULE_TYPES,
@@ -119,6 +129,7 @@ export const CONSTANTS = {
     LEGAL_COMPLIANCE_VERSION,
     OAUTH_NONCE_MAX_DURATION,
     LOADER_UPDATE_INTERVAL,
+    INVITE_PERMISSIONS,
 }
 
 export const read_constants = async (req, res, next) => {

@@ -1,7 +1,7 @@
 import {get_path} from '../utils.js'
 import {validate as validate_uuid} from 'uuid'
 import logger from '../providers/logger.js'
-import {SERVER_STATUS, COMMAND_STATUS, AGENT_STATUS, MODULE_TYPES} from '../configs/constants.js'
+import {SERVER_STATUS, COMMAND_STATUS, AGENT_STATUS, MODULE_TYPES, TEAM_ROLES} from '../configs/constants.js'
 
 // === Request handlers ===
 
@@ -34,6 +34,12 @@ const validation_logic = {
         if (typeof value !== 'string') return null
         const trimmed = value.trim()
         return validate_uuid(trimmed) ? trimmed : null
+    },
+    role: (value) => {
+        if (typeof value !== 'string') return null
+        const trimmed = value.trim().toLowerCase()
+        if (!TEAM_ROLES.includes(trimmed)) return null
+        return trimmed
     },
     agent_name: (value) => {
         if (typeof value !== 'string') return null
@@ -73,6 +79,11 @@ const validation_logic = {
         if (parts.length !== 4) return null
         if (parts.some((part) => part.length === 0)) return null
         return trimmed
+    },
+    invite_code: (value) => {
+        if (typeof value !== 'string') return null
+        const trimmed = value.trim()
+        return trimmed.length > 0 && trimmed.length <= 255 ? trimmed : null
     },
     public_key: (value) => {
         if (typeof value !== 'string') return null

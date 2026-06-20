@@ -1,7 +1,12 @@
 import pool from '../providers/db.js'
+import {redis_client} from '../providers/redis.js'
 import {v7 as uuid} from 'uuid'
 import {nanoid} from 'nanoid-nice'
+import ms from 'ms'
 import {format_columns_select} from '../utils.js'
+import {INVITE_CODE_EXPIRY} from '../configs/constants.js'
+
+const invite_code_expiry = ms(INVITE_CODE_EXPIRY) / 1000
 
 export const insert_single = async (user_id, data) => {
     const connection = await pool.getConnection()
@@ -19,6 +24,16 @@ export const insert_single = async (user_id, data) => {
     } finally {
         connection.release()
     }
+}
+
+export const select_userteam_by_user_id_and_team_id = async (user_id, team_id, columns) => {
+    const [results] = await pool.query(
+        `SELECT ${format_columns_select(columns)}
+        FROM UserTeam
+        WHERE user_id = UUID_TO_BIN(?) AND team_id = UUID_TO_BIN(?)`,
+        [user_id, team_id],
+    )
+    return results[0]
 }
 
 export const get_all_data_by_team_id = async (team_id, agent_columns, command_columns, server_columns, module_columns, tunnel_columns) => {
@@ -89,4 +104,23 @@ export const check_access_by_user_id_and_role = async (user_id, team_id, role) =
         [user_id, team_id, user_id, team_id, role],
     )
     return results[0][0]
+}
+
+export const create_invite_code = async (team_id, role) => {
+    const invite_code = nanoid(8)
+    await redis_client.set(`invite_code:${invite_code}`, JSON.stringify({team_id, role}), "EX", invite_code_expiry)
+    return invite_code
+}
+
+export const insert_user_by_invite_code = async (invite_code, user_id) => {
+    const redis_key = `invite_code:${invite_code}`
+    const redis_value = await redis_client.getdel(redis_key)
+    const {team_id, role} = JSON.parse(redis_value)
+    if (team_id === null) return null
+    const results = await pool.execute(`
+        INSERT INTO UserTeam (user_id, team_id, role)
+        VALUES (UUID_TO_BIN(?), UUID_TO_BIN(?), ?)`,
+        [user_id, team_id, role],
+    )
+    return results
 }

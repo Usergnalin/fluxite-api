@@ -15,6 +15,28 @@ router.post(
     global_controller.send_data({data_path: 'team_data'}),
 )
 
+// Create invite code (user)
+router.post(
+    '/:team_id/invite',
+    rate_limiter.slow,
+    session_handler.verify_session_token(),
+    global_controller.load_param_data({field: 'team_id', data_path: 'team_id'}),
+    global_controller.load_body_data({fields: ['role'], data_path: 'team_data'}),
+    team_controller.check_invite_access_by_user_id_and_requested_role(),
+    team_controller.create_team_invite_code(),
+    global_controller.send_data({data_path: 'invite_code'}),
+)
+
+// Join team by invite code (user)
+router.post(
+    '/join',
+    rate_limiter.slow,
+    session_handler.verify_session_token(),
+    global_controller.load_body_data({fields: ['invite_code'], data_path: 'team_data'}),
+    team_controller.join_by_invite_code({user_id_path: 'user_id', invite_code_path: 'team_data.invite_code'}),
+    global_controller.send_empty(),
+)
+
 // Get all data by team id (user)
 router.get(
     '/:team_id',
