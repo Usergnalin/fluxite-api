@@ -1,7 +1,7 @@
 import pool from '../providers/db.js'
 import {format_columns_select, filter_object} from '../utils.js'
 import {db_events} from '../providers/events.js'
-import {COMMAND_COLUMNS} from '../configs/constants.js'
+import {COMMAND_COLUMNS, TEAM_TYPES, COMMAND_DELETE_BATCH_SIZE} from '../configs/constants.js'
 import {v7 as uuid} from 'uuid'
 
 const formatted_command_columns = format_columns_select(COMMAND_COLUMNS, 'Command')
@@ -139,4 +139,69 @@ export const update_by_command_id = async (command_id, data, columns) => {
     } finally {
         connection.release()
     }
+}
+
+// export const delete_by_created_at_and_team_type = async () => {
+//     for (const [team_type, limits] of Object.entries(TEAM_TYPES)) {
+//         let deleted_ids = []
+//         do {
+//             const [rows] = await pool.execute(`
+//                 SELECT BIN_TO_UUID(Command.command_id) as command_id,
+//                        BIN_TO_UUID(Command.agent_id) as agent_id,
+//                        BIN_TO_UUID(Agent.team_id) as team_id
+//                 FROM Command
+//                 INNER JOIN Agent ON Command.agent_id = Agent.agent_id
+//                 INNER JOIN Team ON Agent.team_id = Team.team_id
+//                 WHERE Team.team_type = ?
+//                 AND Command.created_at < NOW() - INTERVAL ? DAY
+//                 LIMIT ?`,
+//                 [team_type, limits.max_command_history_days, COMMAND_DELETE_BATCH_SIZE]
+//             )
+//             if (rows.length === 0) break
+
+//             const ids = rows.map(r => r.command_id)
+
+//             await pool.execute(`
+//                 DELETE FROM Command
+//                 WHERE command_id IN (${ids.map(() => 'UUID_TO_BIN(?)').join(',')})`,
+//                 ids
+//             )
+
+//             for (const row of rows) {
+//                 db_events.emit(`delete:command:command:${row.command_id}`, row)
+//                 db_events.emit(`delete:command:agent:${row.agent_id}`, row)
+//                 db_events.emit(`delete:command:team:${row.team_id}`, row)
+//             }
+
+//             deleted_ids = ids
+//             if (ids.length === COMMAND_DELETE_BATCH_SIZE) await new Promise(r => setTimeout(r, 100))
+//         } while (deleted_ids.length === COMMAND_DELETE_BATCH_SIZE)
+//     }
+// }
+
+export const delete_by_team_type = async (team_type) => {
+    const [rows] = await pool.execute(`
+        SELECT BIN_TO_UUID(Command.command_id) as command_id, BIN_TO_UUID(Command.agent_id) as agent_id, BIN_TO_UUID(Agent.team_id) as team_id
+        FROM Command
+        INNER JOIN Agent ON Command.agent_id = Agent.agent_id
+        INNER JOIN Team ON Agent.team_id = Team.team_id
+        WHERE Team.team_type = ?
+        AND Command.created_at < NOW() - INTERVAL ${TEAM_TYPES[team_type].max_command_history_days} DAY
+        LIMIT ${COMMAND_DELETE_BATCH_SIZE}`,
+        [team_type]
+    )
+    if (rows.length === 0) return rows
+    const ids = rows.map(r => r.command_id)
+    await pool.execute(`
+        DELETE FROM Command
+        WHERE command_id IN (${ids.map(() => 'UUID_TO_BIN(?)').join(',')})`,
+        ids
+    )
+    for (const row of rows) {
+        db_events.emit(`delete:command:command:${row.command_id}`, row)
+        db_events.emit(`delete:command:agent:${row.agent_id}`, row)
+        db_events.emit(`delete:command:team:${row.team_id}`, row)
+    }
+
+    return rows
 }

@@ -131,6 +131,10 @@ export const LOADER_UPDATE_INTERVAL = '6h'
 export const TUNNEL_SYNC_INTERVAL = '1m'
 // Current legal compliance version
 export const LEGAL_COMPLIANCE_VERSION = 1
+// Batch size for deleting commands
+export const COMMAND_DELETE_BATCH_SIZE = 100
+// Command deletion job interval
+export const COMMAND_DELETION_INTERVAL = '1h'
 
 export const CONSTANTS = {
     COMMAND_STATUS,
