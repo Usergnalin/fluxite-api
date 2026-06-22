@@ -1,7 +1,7 @@
 import pool from '../providers/db.js'
 import logger from '../providers/logger.js'
 import {redis_client, initialise_redis} from '../providers/redis.js'
-import {COMMAND_STATUS, SERVER_STATUS, AGENT_STATUS, TEAM_ROLES, MODULE_TYPES} from '../configs/constants.js'
+import {COMMAND_STATUS, SERVER_STATUS, AGENT_STATUS, TEAM_ROLES, MODULE_TYPES, TEAM_TYPE_NAMES} from '../configs/constants.js'
 
 const SQLSTATEMENT = `
 
@@ -57,6 +57,7 @@ CREATE TABLE Team (
     team_id BINARY(16) PRIMARY KEY,
     team_name VARCHAR(255) NOT NULL,
     slug VARCHAR(15) NOT NULL,
+    team_type ENUM(${TEAM_TYPE_NAMES.map((r) => `'${r}'`).join(',')}) NOT NULL DEFAULT 'free',
     created_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),
     updated_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     revision BIGINT UNSIGNED NOT NULL DEFAULT 0,

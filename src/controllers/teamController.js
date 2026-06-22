@@ -4,12 +4,15 @@ import logger from '../providers/logger.js'
 import {INVITE_PERMISSIONS} from '../configs/constants.js'
 import {set_path, get_path, filter_object, create_stream} from '../utils.js'
 
-export const create_team = ({team_data_path = 'team_data', user_id_path = 'user_id', output_team_data_path = 'team_data'} = {}) => {
+export const create_free_team = ({team_data_path = 'team_data', user_id_path = 'user_id', output_team_data_path = 'team_data'} = {}) => {
     return async (req, res, next) => {
         try {
             const {team_name} = get_path(res, team_data_path)
             const user_id = get_path(res, user_id_path)
-            const results = await team_model.insert_single(user_id, {team_name})
+            const results = await team_model.insert_single_free(user_id, {team_name})
+            if (results.quota_exceeded) {
+                return res.status(403).json({message: 'Free team limit reached'})
+            }
             set_path(res, output_team_data_path, {
                 team_id: results.team_id,
                 slug: results.slug,
@@ -44,8 +47,12 @@ export const join_by_invite_code = ({user_id_path = 'user_id', invite_code_path 
             const user_id = get_path(res, user_id_path)
             const invite_code = get_path(res, invite_code_path)
             const results = await team_model.insert_user_by_invite_code(invite_code, user_id)
-            if (results === null) {
+            if (results.invalid_invite_code) {
                 return res.status(403).json({message: "Invalid invite code"})
+            } else if (results.team_not_found) {
+                return res.status(404).json({message: "Team not found"})
+            } else if (results.quota_exceeded) {
+                return res.status(403).json({message: "Member per Team limit exceeded"})
             }
             next()
         } catch (error) {
@@ -85,6 +92,24 @@ export const check_access_by_user_id_and_role = ({team_id_path = 'team_id', user
             }
             if (!results.has_access) {
                 return res.status(403).json({message: 'User does not have access to this team'})
+            }
+            next()
+        } catch (error) {
+            next(error)
+        }
+    }
+}
+
+export const check_free_team_limit_by_user_id = ({user_id_path = 'user_id'} = {}) => {
+    return async (req, res, next) => {
+        try {
+            const user_id = get_path(res, user_id_path)
+            const results = await team_model.check_free_team_limit_by_user_id(user_id)
+            if (!results.user_exists) {
+                return res.status(404).json({message: 'User not found'})
+            }
+            if (results.at_free_team_limit) {
+                return res.status(403).json({message: 'Free team limit reached'})
             }
             next()
         } catch (error) {

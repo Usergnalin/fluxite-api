@@ -52,7 +52,14 @@ app.use(
 )
 
 app.disable('x-powered-by')
-app.use(pinoHttp({logger}))
+app.use(pinoHttp({
+    logger,
+    customLogLevel: (req, res, err) => {
+        if (err || res.statusCode >= 500) return 'error'
+        if (res.statusCode >= 400) return 'warn'
+        return 'info'
+    }
+}))
 app.use(express.json({limit: JSON_MAX_BODY_SIZE}))
 app.use(express.urlencoded({extended: false}))
 app.use(cookieParser())

@@ -90,6 +90,15 @@ router.delete(
     global_controller.send_empty(),
 )
 
+// Delete agent (agent)
+router.delete(
+    '/',
+    rate_limiter.normal,
+    agent_auth_handler.verify_agent_token(),
+    agent_controller.delete_agent_by_agent_id(),
+    global_controller.send_empty(),
+)
+
 // Stream server logs by server_id (user)
 router.get(
     '/logs/:agent_id/stream',

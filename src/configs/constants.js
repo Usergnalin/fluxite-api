@@ -51,13 +51,50 @@ export const SSE_HEARTBEAT_INTERVAL = '40s'
 export const AGENT_HEARTBEAT_EXPIRY = '60s'
 
 // -- Rate Limits ---
+
 export const RATE_LIMIT = {
     slow: {window: '10m', limit: 10},
     normal: {window: '5m', limit: 200},
     fast: {window: '1m', limit: 200},
 }
 
+// -- Quotas --
+
+// Maximum amount of free teams a user is allowed to be a owner of. Enforced on user side team creation
+export const MAX_FREE_TEAMS_PER_USER = 1
+// Maximum servers per agent derived from range 25565-25600. Enforced on agent side server registration
+export const MAX_SERVERS_PER_AGENT = 36 
+
+// Specifies types of teams including paid, should always contain a free type
+// max_agent: Maximum number of agents for a team. Enforced on install API registration. Hide linking on frontend when at limit
+// max_tunnels: Maximum number of tunnels for a team. Enforced on API tunnel creation
+// max_command_history_days: Number of days commands will persist for before deletion. Enforced on periodic cleanup TODO
+// max_team_members: Maximum number of team members a team can have. Enforced on join. Hide invite on frontend when at limit
+export const TEAM_TYPES = {
+    free: {
+        max_agents: 1,
+        max_tunnels: 1,
+        max_command_history_days: 7,
+        max_team_members: 3,
+    },
+    // plus: {
+    //     max_agents: 5,
+    //     max_tunnels: 10,
+    //     max_command_history_days: 90,
+    //     max_team_members: 20,
+    // },
+    // pro: {
+    //     max_agents: 20,
+    //     max_tunnels: 50,
+    //     max_command_history_days: 365,
+    //     max_team_members: 100,
+    // },
+}
+
+export const TEAM_TYPE_NAMES = Object.keys(TEAM_TYPES)
+
 // -- Tunneling ---
+
 // Integer starting tunnel ip 
 export const NET_BASE = 2886729728 // 172.16.0.0
 // Minimum offset for peer ips
@@ -70,6 +107,9 @@ export const MAX_RETRIES = 5
 export const MIN_SUBDOMAIN_SLUG_LENGTH = 3
 // Maximum Tunnel subdomain slug length
 export const MAX_SUBDOMAIN_SLUG_LENGTH = 10
+// Allowed port range for servers & tunnels
+export const MIN_PORT = 25565
+export const MAX_PORT = 25600
 
 // --- Other configurables ---
 
@@ -130,6 +170,10 @@ export const CONSTANTS = {
     OAUTH_NONCE_MAX_DURATION,
     LOADER_UPDATE_INTERVAL,
     INVITE_PERMISSIONS,
+    TEAM_TYPES,
+    TEAM_TYPE_NAMES,
+    MIN_PORT,
+    MAX_PORT,
 }
 
 export const read_constants = async (req, res, next) => {

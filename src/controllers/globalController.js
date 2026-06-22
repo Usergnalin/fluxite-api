@@ -1,14 +1,14 @@
 import {get_path} from '../utils.js'
 import {validate as validate_uuid} from 'uuid'
 import logger from '../providers/logger.js'
-import {SERVER_STATUS, COMMAND_STATUS, AGENT_STATUS, MODULE_TYPES, TEAM_ROLES} from '../configs/constants.js'
+import {SERVER_STATUS, COMMAND_STATUS, AGENT_STATUS, MODULE_TYPES, TEAM_ROLES, MIN_PORT, MAX_PORT} from '../configs/constants.js'
 
 // === Request handlers ===
 
 const validation_logic = {
     agent_port: (value) => {
         const parsed_value = parseInt(value)
-        return Number.isSafeInteger(parsed_value) && parsed_value > 0 && parsed_value <= 65535 ? parsed_value : null
+        return Number.isSafeInteger(parsed_value) && parsed_value > MIN_PORT && parsed_value <= MAX_PORT ? parsed_value : null
     },
     tunnel_name: (value) => {
         if (typeof value !== 'string') return null
@@ -133,7 +133,7 @@ const validation_logic = {
     },
     server_port: (value) => {
         const parsed_value = parseInt(value)
-        return Number.isSafeInteger(parsed_value) && parsed_value > 0 && parsed_value <= 65535 ? parsed_value : null
+        return Number.isSafeInteger(parsed_value) && parsed_value >= MIN_PORT && parsed_value <= MAX_PORT ? parsed_value : null
     },
     command_status: (value) => {
         if (typeof value !== 'string') return null

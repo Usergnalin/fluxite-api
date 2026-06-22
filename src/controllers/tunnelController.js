@@ -23,8 +23,14 @@ export const create_server_tunnel = ({server_id_path = 'server_id', output_tunne
         try {
             const server_id = get_path(res, server_id_path)
             const results = await tunnel_model.insert_server_tunnel(server_id)
-            if (results === null) {
-                return res.status(409).json({message: 'Failed to create tunnel'})
+            if (results.team_not_found) {
+                return res.status(404).json({message: "Team not found"})
+            } else if (results.quota_exceeded) {
+                return res.status(403).json({message: "Tunnel per team quota reached"})
+            } else if (results.routing_failed) {
+                return res.status(500).json({message: "Routing failed"})
+            } else if (results.subdomain_allocation_failed) {
+                return res.status(409).json({message: "Failed to allocate subdomain"})
             }
             set_path(res, output_tunnel_data_path, results.data)
             next()

@@ -4,17 +4,29 @@ import {v7 as uuid} from 'uuid'
 import {nanoid} from 'nanoid-nice'
 import ms from 'ms'
 import {format_columns_select} from '../utils.js'
-import {INVITE_CODE_EXPIRY} from '../configs/constants.js'
+import {INVITE_CODE_EXPIRY, MAX_FREE_TEAMS_PER_USER, TEAM_TYPES} from '../configs/constants.js'
 
 const invite_code_expiry = ms(INVITE_CODE_EXPIRY) / 1000
+const max_free_teams_per_user = MAX_FREE_TEAMS_PER_USER
 
-export const insert_single = async (user_id, data) => {
+export const insert_single_free = async (user_id, data) => {
     const connection = await pool.getConnection()
     try {
         const team_id = uuid()
         const slug = nanoid(6)
         await connection.beginTransaction()
-        await connection.execute(`INSERT INTO Team (team_id, team_name, slug) VALUES (UUID_TO_BIN(?), ?, ?)`, [team_id, data.team_name, slug])
+        const [[quota_results]] = await connection.execute(`
+            SELECT COUNT(*) >= ? AS quota_exceeded
+            FROM UserTeam
+            WHERE user_id = UUID_TO_BIN(?)
+            FOR UPDATE`,
+            [MAX_FREE_TEAMS_PER_USER, user_id]
+        )
+        if (quota_results.quota_exceeded) {
+            await connection.rollback()
+            return quota_results
+        }
+        await connection.execute(`INSERT INTO Team (team_id, team_name, slug, team_type) VALUES (UUID_TO_BIN(?), ?, ?, ?)`, [team_id, data.team_name, slug, 'free'])
         await connection.execute(`INSERT INTO UserTeam (user_id, team_id, role) VALUES (UUID_TO_BIN(?), UUID_TO_BIN(?), ?)`, [user_id, team_id, 'owner'])
         await connection.commit()
         return {team_id, slug}
@@ -85,8 +97,7 @@ export const get_all_data_by_team_id = async (team_id, agent_columns, command_co
 }
 
 export const check_access_by_user_id_and_role = async (user_id, team_id, role) => {
-    const results = await pool.query(
-        `
+    const results = await pool.query(`
         SELECT
         EXISTS (
             SELECT 1 FROM User WHERE user_id = UUID_TO_BIN(?)
@@ -115,12 +126,59 @@ export const create_invite_code = async (team_id, role) => {
 export const insert_user_by_invite_code = async (invite_code, user_id) => {
     const redis_key = `invite_code:${invite_code}`
     const redis_value = await redis_client.getdel(redis_key)
+    if (redis_value === null) return {invalid_invite_code: 1}
     const {team_id, role} = JSON.parse(redis_value)
-    if (team_id === null) return null
-    const results = await pool.execute(`
-        INSERT INTO UserTeam (user_id, team_id, role)
-        VALUES (UUID_TO_BIN(?), UUID_TO_BIN(?), ?)`,
-        [user_id, team_id, role],
+    const connection = await pool.getConnection()
+    try {
+        await connection.beginTransaction()
+        const [team_rows] = await connection.execute(`
+            SELECT team_type FROM Team WHERE team_id = UUID_TO_BIN(?) FOR UPDATE`,
+            [team_id]
+        )
+        if (team_rows.length === 0) {
+            await connection.rollback()
+            return {team_not_found: 1}
+        }
+        const max_team_members = TEAM_TYPES[team_rows[0].team_type].max_team_members
+        const [[quota_results]] = await connection.execute(`
+            SELECT COUNT(*) >= ? AS quota_exceeded
+            FROM UserTeam WHERE team_id = UUID_TO_BIN(?)`,
+            [max_team_members, team_id]
+        )
+        if (quota_results.quota_exceeded) {
+            await connection.rollback()
+            return quota_results
+        }
+        const results = await connection.execute(`
+            INSERT INTO UserTeam (user_id, team_id, role)
+            VALUES (UUID_TO_BIN(?), UUID_TO_BIN(?), ?)`,
+            [user_id, team_id, role],
+        )
+        await connection.commit()
+        return results
+    } catch (error) {
+        await connection.rollback()
+        throw error
+    } finally {
+        connection.release()
+    }
+}
+
+export const check_free_team_limit_by_user_id = async (user_id) => {
+    const results = await pool.query(`
+        SELECT
+        EXISTS (
+            SELECT 1 FROM User WHERE user_id = UUID_TO_BIN(?)
+        ) AS user_exists,
+        (
+            SELECT COUNT(*) > ?
+            FROM UserTeam
+            JOIN Team ON Team.team_id = UserTeam.team_id
+            WHERE UserTeam.user_id = UUID_TO_BIN(?)
+              AND UserTeam.role = 'owner'
+              AND Team.plan = 'free'
+        ) AS at_free_team_limit`,
+        [user_id, max_free_teams_per_user, user_id]
     )
-    return results
+    return results[0][0]
 }

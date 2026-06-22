@@ -4,7 +4,7 @@ import {redis_client} from '../providers/redis.js'
 import ms from 'ms'
 import {v7 as uuid} from 'uuid'
 import {generate_phrase, format_columns_select, random_tunnel_ip, int_to_ip} from '../utils.js'
-import {LINKING_CODE_EXPIRY, AGENT_COLUMNS, MAX_RETRIES} from '../configs/constants.js'
+import {LINKING_CODE_EXPIRY, AGENT_COLUMNS, MAX_RETRIES, TEAM_TYPES} from '../configs/constants.js'
 
 const linking_code_expiry = ms(LINKING_CODE_EXPIRY) / 1000
 const formatted_agent_columns = format_columns_select(AGENT_COLUMNS, 'Agent')
@@ -14,60 +14,80 @@ export const insert_by_linking_code = async (linking_code, data) => {
     const team_id = await redis_client.getdel(redis_key)
     const agent_status = 'offline'
     if (team_id === null) {
-        return null
+        return {invalid_linking_code: 1}
     }
     const agent_id = uuid()
     const connection = await pool.getConnection()
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-        try {
-            const tunnel_ip_int = random_tunnel_ip()
+    try {
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
             await connection.beginTransaction()
-            await connection.execute(
-                `
-                INSERT INTO Agent (agent_id, team_id, agent_name, public_key, tunnel_public_key, tunnel_ip, agent_status)
-                VALUES (UUID_TO_BIN(?), UUID_TO_BIN(?), ?, ?, ?, ?, ?)`,
-                [agent_id, team_id, data.agent_name, data.public_key, data.tunnel_public_key, tunnel_ip_int, agent_status],
-            )
-            const [select_results] = await connection.execute(
-                `
-                SELECT ${formatted_agent_columns}
-                FROM Agent WHERE agent_id = UUID_TO_BIN(?)`,
-                [agent_id],
-            )
-            await connection.commit()
-            const payload = select_results[0]
-            const tunnel_add_response = await fetch(process.env.WG_API_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Token ${process.env.WG_API_TOKEN}`,
-                },
-                body: JSON.stringify({
-                    "jsonrpc": "2.0",
-                    "method": "AddPeer",
-                    "params": {
-                        "public_key": payload.tunnel_public_key,
-                        "allowed_ips": [`${int_to_ip(tunnel_ip_int)}/32`]
-                    }
-                }),
-            })
-            const tunnel_add_result = await tunnel_add_response.json()
-            if (tunnel_add_result.result.ok === false) {
+            try {
+                const [team_rows] = await connection.execute(`
+                    SELECT team_type FROM Team WHERE team_id = UUID_TO_BIN(?) FOR UPDATE`,
+                    [team_id]
+                )
+                if (team_rows.length === 0) {
+                    await connection.rollback()
+                    return {team_not_found: 1}
+                }
+                const max_agents = TEAM_TYPES[team_rows[0].team_type].max_agents
+                const [[quota_results]] = await connection.execute(`
+                    SELECT COUNT(*) >= ? AS quota_exceeded
+                    FROM Agent WHERE team_id = UUID_TO_BIN(?)`,
+                    [max_agents, team_id]
+                )
+                if (quota_results.quota_exceeded) {
+                    await connection.rollback()
+                    return quota_results
+                }
+                const tunnel_ip_int = random_tunnel_ip()
+                await connection.execute(`
+                    INSERT INTO Agent (agent_id, team_id, agent_name, public_key, tunnel_public_key, tunnel_ip, agent_status)
+                    VALUES (UUID_TO_BIN(?), UUID_TO_BIN(?), ?, ?, ?, ?, ?)`,
+                    [agent_id, team_id, data.agent_name, data.public_key, data.tunnel_public_key, tunnel_ip_int, agent_status],
+                )
+                const [agent_rows] = await connection.execute(`
+                    SELECT ${formatted_agent_columns}
+                    FROM Agent WHERE agent_id = UUID_TO_BIN(?)`,
+                    [agent_id],
+                )
+                const tunnel_add_response = await fetch(process.env.WG_API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${process.env.WG_API_TOKEN}`,
+                    },
+                    body: JSON.stringify({
+                        "jsonrpc": "2.0",
+                        "method": "AddPeer",
+                        "params": {
+                            "public_key": agent_rows[0].tunnel_public_key,
+                            "allowed_ips": [`${int_to_ip(tunnel_ip_int)}/32`]
+                        }
+                    }),
+                })
+                const tunnel_add_result = await tunnel_add_response.json()
+                if (!tunnel_add_response.ok || tunnel_add_result.result?.ok !== true) {
+                    await connection.rollback()
+                    return { tunnel_registration_failed: 1 }
+                }
+                await connection.commit()
+                const payload = agent_rows[0]
+                db_events.emit(`create:agent:agent:${payload.agent_id}`, payload)
+                db_events.emit(`create:agent:team:${payload.team_id}`, payload)
+                return payload
+            } catch (error) {
                 await connection.rollback()
-                return null
+                if (error.code === 'ER_DUP_ENTRY' && error.sqlMessage?.includes('tunnel_ip')) {
+                    continue
+                }
+                throw error
             }
-            db_events.emit(`create:agent:agent:${payload.agent_id}`, payload)
-            db_events.emit(`create:agent:team:${payload.team_id}`, payload)
-            return payload
-        } catch (error) {
-            await connection.rollback()
-            if (error.code === 'ER_DUP_ENTRY' && attempt < MAX_RETRIES - 1) continue
-            throw error
-        } finally {
-            connection.release()
         }
+        return {ip_allocation_failed: 1}
+    } finally {
+        connection.release()
     }
-    return null
 }
 
 export const select_by_agent_id = async (agent_id, columns) => {

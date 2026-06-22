@@ -18,8 +18,14 @@ export const create_agent_by_linking_code = ({agent_data_path = 'agent_data', li
             const {linking_code} = get_path(res, linking_code_path)
             const agent_data = get_path(res, agent_data_path)
             const results = await agent_model.insert_by_linking_code(linking_code, agent_data)
-            if (results === null) {
+            if (results.invalid_linking_code) {
                 return res.status(403).json({message: 'Invalid linking code'})
+            } else if (results.team_not_found) {
+                return res.status(404).json({message: 'Team not found'})
+            } else if (results.quota_exceeded) {
+                return res.status(403).json({message: 'Agent per team quota reached'})
+            } else if (results.tunnel_registration_failed) {
+                return res.status(500).json({message: 'Tunnel registration failed'})
             }
             set_path(res, output_agent_data_path, results)
             next()

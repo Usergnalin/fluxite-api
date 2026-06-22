@@ -10,7 +10,12 @@ export const create_server = ({server_data_path = 'server_data', agent_id_path =
         try {
             const server_data = get_path(res, server_data_path)
             const agent_id = get_path(res, agent_id_path)
-            await server_model.insert_single(agent_id, server_data)
+            const results = await server_model.insert_single(agent_id, server_data)
+            if (results.agent_not_found) {
+                return res.status(404).json({message: "Agent not found"})
+            } else if (results.quota_exceeded) {
+                return res.status(403).json({message: 'Server per agent limit exceeded'})
+            }
             next()
         } catch (error) {
             next(error)

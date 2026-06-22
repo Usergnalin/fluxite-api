@@ -1,7 +1,7 @@
 import pool from '../providers/db.js'
 import {db_events} from '../providers/events.js'
 import {format_columns_select} from '../utils.js'
-import {SERVER_COLUMNS} from '../configs/constants.js'
+import {SERVER_COLUMNS, MAX_SERVERS_PER_AGENT} from '../configs/constants.js'
 
 const formatted_server_columns = format_columns_select(SERVER_COLUMNS, 'Server')
 
@@ -54,16 +54,30 @@ export const insert_single = async (agent_id, data) => {
     const connection = await pool.getConnection()
     try {
         await connection.beginTransaction()
-        console.log(data)
-        const [insert_results] = await connection.execute(`INSERT INTO Server (server_id, agent_id, server_name, server_port, properties) VALUES (UUID_TO_BIN(?), UUID_TO_BIN(?), ?, ?, ?)`, [
-            data.server_id,
-            agent_id,
-            data.server_name,
-            data.server_port,
-            JSON.stringify(data.properties),
-        ])
-        const [select_results] = await connection.execute(
-            `
+        const [agent_rows] = await connection.execute(`
+            SELECT * FROM Agent WHERE agent_id = UUID_TO_BIN(?) FOR UPDATE`,
+            [agent_id]
+        )
+        if (agent_rows.length === 0) {
+            await connection.rollback()
+            return {agent_not_found: 1}
+        }
+        const [[quota_results]] = await connection.execute(`
+            SELECT COUNT(*) >= ? AS quota_exceeded
+            FROM Server
+            WHERE agent_id = UUID_TO_BIN(?)`,
+            [MAX_SERVERS_PER_AGENT, agent_id]
+        )
+        if (quota_results.quota_exceeded) {
+            await connection.rollback()
+            return quota_results
+        }
+        const [insert_results] = await connection.execute(`
+            INSERT INTO Server (server_id, agent_id, server_name, server_port, properties)
+            VALUES (UUID_TO_BIN(?), UUID_TO_BIN(?), ?, ?, ?)`,
+            [data.server_id, agent_id, data.server_name, data.server_port, JSON.stringify(data.properties)]
+        )
+        const [select_results] = await connection.execute(`
             SELECT BIN_TO_UUID(Agent.team_id) as team_id, ${formatted_server_columns}
             FROM Server
             INNER JOIN Agent ON Server.agent_id = Agent.agent_id
