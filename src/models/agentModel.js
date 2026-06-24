@@ -3,7 +3,8 @@ import {db_events} from '../providers/events.js'
 import {redis_client} from '../providers/redis.js'
 import ms from 'ms'
 import {v7 as uuid} from 'uuid'
-import {generate_phrase, format_columns_select, random_tunnel_ip, int_to_ip} from '../utils.js'
+import {nanoid} from 'nanoid-nice'
+import {format_columns_select, random_tunnel_ip, int_to_ip} from '../utils.js'
 import {LINKING_CODE_EXPIRY, AGENT_COLUMNS, MAX_RETRIES, TEAM_TYPES} from '../configs/constants.js'
 
 const linking_code_expiry = ms(LINKING_CODE_EXPIRY) / 1000
@@ -230,7 +231,7 @@ export const check_access_by_user_id_and_role = async (user_id, agent_id, role) 
 }
 
 export const create_linking_code = async (team_id) => {
-    const linking_code = generate_phrase()
+    const linking_code = nanoid(5).toUpperCase()
     await redis_client.set(`linking_code:${linking_code}`, team_id, "EX", linking_code_expiry)
     return linking_code
 }

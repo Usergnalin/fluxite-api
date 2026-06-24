@@ -68,17 +68,13 @@ const validation_logic = {
     },
     linking_code: (value) => {
         if (typeof value !== 'string') return null
-        const trimmed = value.trim().toLowerCase()
-        if (trimmed.length === 0) return null
-        const parts = trimmed.split('-')
-        if (parts.length !== 4) return null
-        if (parts.some((part) => part.length === 0)) return null
-        return trimmed
+        const trimmed = value.trim()
+        return trimmed.length === 5 ? trimmed : null
     },
     invite_code: (value) => {
         if (typeof value !== 'string') return null
         const trimmed = value.trim()
-        return trimmed.length > 0 && trimmed.length <= 255 ? trimmed : null
+        return trimmed.length === 5 ? trimmed : null
     },
     public_key: (value) => {
         if (typeof value !== 'string') return null

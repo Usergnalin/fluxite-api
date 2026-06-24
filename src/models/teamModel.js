@@ -118,7 +118,7 @@ export const check_access_by_user_id_and_role = async (user_id, team_id, role) =
 }
 
 export const create_invite_code = async (team_id, role) => {
-    const invite_code = nanoid(8)
+    const invite_code = nanoid(5)
     await redis_client.set(`invite_code:${invite_code}`, JSON.stringify({team_id, role}), "EX", invite_code_expiry)
     return invite_code
 }
