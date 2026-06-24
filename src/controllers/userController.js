@@ -19,22 +19,6 @@ export const get_user_by_user_id_with_team = ({user_fields, user_team_fields, te
     }
 }
 
-export const get_user_by_username = ({fields, username_path = 'user_data.username', user_data_path = 'user_data'} = {}) => {
-    return async (req, res, next) => {
-        try {
-            const username = get_path(res, username_path)
-            const results = await user_model.select_by_username(username, fields)
-            if (results === undefined) {
-                return res.status(404).json({message: 'User not found'})
-            }
-            set_path(res, user_data_path, results)
-            next()
-        } catch (error) {
-            next(error)
-        }
-    }
-}
-
 export const update_user_by_user_id = ({fields, user_id_path = 'user_id', user_data_path = 'user_data'} = {}) => {
     return async (req, res, next) => {
         try {
@@ -46,9 +30,6 @@ export const update_user_by_user_id = ({fields, user_id_path = 'user_id', user_d
             }
             next()
         } catch (error) {
-            if (error.code === 'ER_DUP_ENTRY') {
-                return res.status(409).json({message: 'Username already exists'})
-            }
             next(error)
         }
     }

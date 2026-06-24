@@ -78,16 +78,6 @@ export const select_by_user_id_with_team = async (user_id, user_columns, user_te
     return user
 }
 
-export const select_by_username = async (username, columns) => {
-    const [rows] = await pool.query(
-        `SELECT ${format_columns_select(columns)}
-        FROM User
-        WHERE username = ?`,
-        [username],
-    )
-    return rows[0]
-}
-
 export const select_by_user_id = async (user_id, columns) => {
     const [rows] = await pool.query(`
         SELECT ${format_columns_select(columns)}
