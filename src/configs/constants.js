@@ -26,12 +26,8 @@ export const AGENT_TOKEN_DURATION = '120m'
 export const USER_PARTIAL_LOGIN_TOKEN_DURATION = '15m'
 // JWT token signing algorithm for session and refresh tokens
 export const TOKEN_ALGORITHM = 'HS256'
-// Number of salt rounds for hashing passwords, increases time to hash
-export const SALT_ROUNDS = 10
 // Toggle https requirement of cookies
 export const SECURE_COOKIE = true
-// Minimum zxcvbn password score accepted
-export const PASSWORD_MIN_SCORE = 2
 // Period of time where Oauth nonces are kept, nonces older than this are rejected on callback
 export const OAUTH_NONCE_MAX_DURATION = '10m'
 // Invite permission hierarchy
@@ -146,9 +142,9 @@ export const CONSTANTS = {
     USER_TOKEN_DURATION,
     AGENT_TOKEN_DURATION,
     TOKEN_ALGORITHM,
-    SALT_ROUNDS,
+    // SALT_ROUNDS,
     SECURE_COOKIE,
-    PASSWORD_MIN_SCORE,
+    // PASSWORD_MIN_SCORE,
     SSE_HEARTBEAT_INTERVAL,
     AGENT_HEARTBEAT_EXPIRY,
     SLUG_LENGTH,

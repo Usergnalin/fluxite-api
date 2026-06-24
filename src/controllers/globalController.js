@@ -20,11 +20,6 @@ const validation_logic = {
         const trimmed = value.trim()
         return trimmed.length > 0 && trimmed.length <= 63 ? trimmed : null
     },
-    password: (value) => {
-        if (typeof value !== 'string') return null
-        const trimmed = value.trim()
-        return trimmed.length > 0 && trimmed.length <= 63 ? trimmed : null
-    },
     team_name: (value) => {
         if (typeof value !== 'string') return null
         const trimmed = value.trim()

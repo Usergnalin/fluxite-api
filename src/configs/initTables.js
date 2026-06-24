@@ -21,7 +21,6 @@ DROP TABLE IF EXISTS Tunnel;
 CREATE TABLE User (
     user_id BINARY(16) PRIMARY KEY,
     username VARCHAR(63) NOT NULL UNIQUE,
-    password VARCHAR(63) NULL,
     accepted_legal_compliance_version INT UNSIGNED NOT NULL DEFAULT 0,
     legal_compliance_accepted_at TIMESTAMP(6) NULL,
     created_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),

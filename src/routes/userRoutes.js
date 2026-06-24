@@ -1,20 +1,9 @@
 import express from 'express'
 const router = express.Router()
 import * as rate_limiter from '../providers/rateLimiter.js'
-import * as password_handler from '../middlewares/passwordHandler.js'
 import * as session_handler from '../middlewares/sessionHandler.js'
 import * as global_controller from '../controllers/globalController.js'
 import * as user_controller from '../controllers/userController.js'
-
-// Create new user (user)
-router.post(
-    '/',
-    rate_limiter.slow,
-    global_controller.load_body_data({fields: ['username', 'password'], data_path: 'user_data'}),
-    password_handler.hash_password(),
-    user_controller.create_user(),
-    global_controller.send_data({data_path: 'user_team_data'}),
-)
 
 // Get user details by id (user)
 router.get(

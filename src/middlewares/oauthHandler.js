@@ -20,7 +20,7 @@ export const generate_oauth_url = ({oauth_url_path = "oauth_url"} = {}) => {
             url.searchParams.set('client_id', process.env.OAUTH_CLIENT_ID)
             url.searchParams.set('redirect_uri', `https://${process.env.API_BASE}/auth/google/callback`)
             url.searchParams.set('response_type', 'code')
-            url.searchParams.set('scope', 'openid')
+            url.searchParams.set('scope', 'openid profile')
             url.searchParams.set('state', oauth_nonce)
             const oauth_url = url.toString()
             console.log(oauth_url)
@@ -47,7 +47,7 @@ export const validate_nonce = ({nonce_path = "state"} = {}) => {
     }
 }
 
-export const exchange_code = ({code_path = "code", provider_user_id_path = "provider_user_id"} = {}) => {
+export const exchange_code = ({code_path = "code", provider_user_id_path = "provider_user_id", oauth_username_path = "oauth_username"} = {}) => {
     return async (req, res, next) => {
         try {
             const code = get_path(res, code_path)
@@ -69,7 +69,9 @@ export const exchange_code = ({code_path = "code", provider_user_id_path = "prov
             })
             const payload = ticket.getPayload()
             const provider_user_id = payload['sub']
+            const oauth_username = payload['name'] || payload['given_name'] || null
             set_path(res, provider_user_id_path, provider_user_id)
+            set_path(res, oauth_username_path, oauth_username)
             next()
         } catch (error) {
             next(error)
@@ -77,14 +79,15 @@ export const exchange_code = ({code_path = "code", provider_user_id_path = "prov
     }
 }
 
-export const get_or_create_oauth_user = ({provider, provider_user_id_path = "provider_user_id", output_user_id_path = "user_id"} = {}) => {
+export const get_or_create_oauth_user = ({provider, provider_user_id_path = "provider_user_id", oauth_username_path = "oauth_username", output_user_id_path = "user_id"} = {}) => {
     return async (req, res, next) => {
         try {
             const provider_user_id = get_path(res, provider_user_id_path)
+            const oauth_username = get_path(res, oauth_username_path)
             const select_result = await identity_model.select_by_provider_user_id_and_provider(provider, provider_user_id, ['user_id'])
             let user_id
             if (!select_result) {
-                const insert_result = await user_model.insert_single_with_identity(provider, provider_user_id)
+                const insert_result = await user_model.insert_single_with_identity(provider, provider_user_id, oauth_username)
                 user_id = insert_result.user_id
             } else {
                 user_id = select_result.user_id

@@ -3,26 +3,6 @@ import {set_path, get_path} from '../utils.js'
 
 // === Database operations ===
 
-export const create_user = ({user_data_path = 'user_data', output_user_team_data_path = 'user_team_data'} = {}) => {
-    return async (req, res, next) => {
-        try {
-            const {username, password} = get_path(res, user_data_path)
-            const results = await user_model.insert_single({username, password})
-            set_path(res, output_user_team_data_path, {
-                user_id: results.user_id,
-                team_id: results.team_id,
-                slug: results.slug,
-            })
-            next()
-        } catch (error) {
-            if (error.code === 'ER_DUP_ENTRY') {
-                return res.status(409).json({message: 'Username already exists'})
-            }
-            next(error)
-        }
-    }
-}
-
 export const get_user_by_user_id_with_team = ({user_fields, user_team_fields, team_fields, user_id_path = 'user_id', user_data_path = 'user_data'} = {}) => {
     return async (req, res, next) => {
         try {
